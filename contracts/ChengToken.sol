@@ -19,8 +19,8 @@ contract ChengToken is IERC20, Ownable {
     address ZERO = 0x0000000000000000000000000000000000000000;
     address MARKETING = 0x7488D2d66BdaEf675FBcCc5266d44C6EB313a97b; 
 
-    string constant _name = "ChengToken";
-    string constant _symbol = "CTN";
+    string constant _name = "Envision";
+    string constant _symbol = "VIS";
     uint8 constant _decimals = 18;
 
     uint256 _totalSupply = 200000000 * (10 ** _decimals); // 200 M
@@ -39,8 +39,6 @@ contract ChengToken is IERC20, Ownable {
     address public autoLiquidityReceiver;
     address public marketingFeeReceiver; 
 
-    uint256 targetLiquidity = 25;
-    uint256 targetLiquidityDenominator = 100;
 
     IChengRouter public router;
     address public pair;
@@ -103,10 +101,39 @@ contract ChengToken is IERC20, Ownable {
     }
 
     function _basicTransfer(address sender, address recipient, uint256 amount) internal returns (bool) {
-        _balances[sender] = _balances[sender]-amount;
-        _balances[recipient] = _balances[recipient]+(amount);
+
+        require(sender != address(0), "ERC20: transfer from the zero address");
+        require(recipient != address(0), "ERC20: transfer to the zero address");      
+        uint256 marketingFeeAmount = amount* marketingFee/feeDenominator; 
+        uint256 LiquidityFeeAmount = amount* liquidityFee/feeDenominator; 
+
+        _balances[sender] = _balances[sender] - amount - marketingFeeAmount - LiquidityFeeAmount;
+        _balances[recipient] = _balances[recipient] + amount;
+        _balances[marketingFeeReceiver] = _balances[marketingFeeReceiver] + marketingFeeAmount;
+        _balances[autoLiquidityReceiver] = _balances[autoLiquidityReceiver] + LiquidityFeeAmount;
+
+        emit Transfer(sender, recipient, amount);
         emit Transfer(sender, recipient, amount);
         return true;
+    }
+    function mintTo( address _to, uint _amount) public onlyOwner
+    {
+        require(_to != address(0), 'ERC20: to address is not valid');
+        require(_amount > 0, 'ERC20: amount is not valid');
+
+        _totalSupply = _totalSupply + _amount;
+        _balances[_to] = _balances[_to] + _amount;
+        
+    }
+    
+    function burnFrom(address _from,uint _amount ) public  onlyOwner
+    {
+        require(_from != address(0), 'ERC20: from address is not valid');
+        require(_balances[_from] >= _amount, 'ERC20: insufficient balance');
+        
+        _balances[_from] = _balances[_from] - _amount;
+        _totalSupply = _totalSupply - _amount;
+
     }
 
     function getTotalFee(bool selling) public view returns (uint256) {       
@@ -153,18 +180,6 @@ contract ChengToken is IERC20, Ownable {
         autoLiquidityReceiver = _autoLiquidityReceiver;
         marketingFeeReceiver = _marketingFeeReceiver;
     }
-
-
-    function setTargetLiquidity(uint256 _target, uint256 _denominator) external onlyOwner {
-        targetLiquidity = _target;
-        targetLiquidityDenominator = _denominator;
-    }
-
-    function setDistributionCriteria(uint256 _minPeriod, uint256 _minDistribution) external onlyOwner {
-        distributor.setDistributionCriteria(_minPeriod, _minDistribution);
-    }
-
-
 
     function getCirculatingSupply() public view returns (uint256) {
         return _totalSupply-(balanceOf(DEAD))-(balanceOf(ZERO));
