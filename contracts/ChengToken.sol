@@ -23,7 +23,7 @@ contract ChengToken is IERC20, Ownable {
     string constant _symbol = "CTN";
     uint8 constant _decimals = 18;
 
-    uint256 _totalSupply = 200000000 * (10 ** _decimals);
+    uint256 _totalSupply = 200000000 * (10 ** _decimals); // 200 M
     uint256 public _maxTxAmount = ( _totalSupply * 1 ) / 100;
     uint256 public _maxWalletToken = ( _totalSupply * 5 ) / 100;
 
@@ -36,9 +36,9 @@ contract ChengToken is IERC20, Ownable {
 
     uint256 liquidityFee    = 5;
     uint256 burnFee   = 5;
-    uint256 marketingFee    = 1;
+    uint256 marketingFee    = 10;
 
-    uint256 public totalFee = 11;
+    uint256 public totalFee = 20;
     uint256 feeDenominator  = 1000;
 
     address public autoLiquidityReceiver;
@@ -52,17 +52,7 @@ contract ChengToken is IERC20, Ownable {
 
     uint256 public launchedAt;
 
-    uint256 buybackMultiplierNumerator = 120;
-    uint256 buybackMultiplierDenominator = 100;
-    uint256 buybackMultiplierTriggeredAt;
-    uint256 buybackMultiplierLength = 30 minutes;
 
-    bool public autoBuybackEnabled = false;
-    uint256 autoBuybackCap;
-    uint256 autoBuybackAccumulator;
-    uint256 autoBuybackAmount;
-    uint256 autoBuybackBlockPeriod;
-    uint256 autoBuybackBlockLast;
 
     DividendDistributor public distributor;
     uint256 distributorGas = 300000;
@@ -146,8 +136,7 @@ contract ChengToken is IERC20, Ownable {
 
         //check tradeCycle is above the volume required
         if(tradingEnabled && _tTradeCycle > tradeSwapVolume) {
-            if(shouldSwapBack()){ swapBack(); }
-            if(shouldAutoBuyback()){ triggerAutoBuyback(); }
+            if(shouldSwapBack()){ swapBack(); }           
         }
 
         if(!isDividendExempt[sender]){ try distributor.setShare(sender, _balances[sender]) {} catch {} }
@@ -180,16 +169,11 @@ contract ChengToken is IERC20, Ownable {
 
     function getTotalFee(bool selling) public view returns (uint256) {
         if(launchedAt + 2 >= block.number){ return feeDenominator-(1); }
-        if(selling && buybackMultiplierTriggeredAt+(buybackMultiplierLength) > block.timestamp){ return getMultipliedFee(); }
         if(selling) { return totalFee+(1); } //tax sellers 1% more than buyers
         return totalFee;
     }
 
-    function getMultipliedFee() public view returns (uint256) {
-        uint256 remainingTime = buybackMultiplierTriggeredAt+(buybackMultiplierLength)-(block.timestamp);
-        uint256 feeIncrease = totalFee*(buybackMultiplierNumerator)/(buybackMultiplierDenominator)-(totalFee);
-        return totalFee+(feeIncrease*(remainingTime)/(buybackMultiplierLength));
-    }
+  
 
     function takeFee(address sender, address receiver, uint256 amount) internal returns (uint256) {
         uint256 feeAmount = amount*(getTotalFee(receiver == pair))/(feeDenominator);
@@ -250,34 +234,7 @@ contract ChengToken is IERC20, Ownable {
 
         _tTradeCycle = 0; //reset trade cycle as liquify has occurred
     }
-
-    function shouldAutoBuyback() internal view returns (bool) {
-        return msg.sender != pair
-            && !inSwap
-            && autoBuybackEnabled
-            && autoBuybackBlockLast + autoBuybackBlockPeriod <= block.number
-            && address(this).balance >= autoBuybackAmount;
-    }
-
-    function triggerManualBuyback(uint256 amount, bool triggerBuybackMultiplier) external onlyOwner {
-        buyTokens(amount, DEAD);
-        if(triggerBuybackMultiplier){
-            buybackMultiplierTriggeredAt = block.timestamp;
-            emit BuybackMultiplierActive(buybackMultiplierLength);
-        }
-    }
-
-    function clearBuybackMultiplier() external onlyOwner {
-        buybackMultiplierTriggeredAt = 0;
-    }
-
-    function triggerAutoBuyback() internal {
-        buyTokens(autoBuybackAmount, DEAD);
-        autoBuybackBlockLast = block.number;
-        autoBuybackAccumulator = autoBuybackAccumulator+(autoBuybackAmount);
-        if(autoBuybackAccumulator > autoBuybackCap){ autoBuybackEnabled = false; }
-    }
-
+   
     function buyTokens(uint256 amount, address to) internal swapping {
         address[] memory path = new address[](2);
         path[0] = WETH;
@@ -289,22 +246,6 @@ contract ChengToken is IERC20, Ownable {
             to,
             block.timestamp
         );
-    }
-
-    function setAutoBuybackSettings(bool _enabled, uint256 _cap, uint256 _amount, uint256 _period) external onlyOwner {
-        autoBuybackEnabled = _enabled;
-        autoBuybackCap = _cap;
-        autoBuybackAccumulator = 0;
-        autoBuybackAmount = _amount/(100);
-        autoBuybackBlockPeriod = _period;
-        autoBuybackBlockLast = block.number;
-    }
-
-    function setBuybackMultiplierSettings(uint256 numerator, uint256 denominator, uint256 length) external onlyOwner {
-        require(numerator / denominator <= 2 && numerator > denominator);
-        buybackMultiplierNumerator = numerator;
-        buybackMultiplierDenominator = denominator;
-        buybackMultiplierLength = length;
     }
 
     function launched() internal view returns (bool) {
@@ -341,10 +282,10 @@ contract ChengToken is IERC20, Ownable {
         isTxLimitExempt[holder] = exempt;
     }
 
-    function setFees(uint256 _liquidityFee, uint256 _buybackFee, uint256 _burnFee, uint256 _marketingFee, uint256 _feeDenominator) external onlyOwner {
+    function setFees(uint256 _liquidityFee, uint256 _burnFee, uint256 _marketingFee, uint256 _feeDenominator) external onlyOwner {
         liquidityFee = _liquidityFee;
         burnFee = _burnFee;
-        totalFee = _liquidityFee+(_buybackFee)+(_burnFee)+(_marketingFee);
+        totalFee = _liquidityFee+(_burnFee)+(_marketingFee);
         feeDenominator = _feeDenominator;
         require(totalFee < feeDenominator/4);
     }
@@ -433,7 +374,6 @@ contract ChengToken is IERC20, Ownable {
         require(IERC20(_tokenAddr).transfer(_to, _amount), "ChengToken:: Transfer failed");
     }	
 
-    event AutoLiquify(uint256 amountREWARD, uint256 amountLIQ);
-    event BuybackMultiplierActive(uint256 duration);
+    event AutoLiquify(uint256 amountREWARD, uint256 amountLIQ);    
     event TradingEnabled(bool enabled);
 }
