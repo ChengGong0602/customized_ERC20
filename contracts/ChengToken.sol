@@ -60,7 +60,6 @@ contract ChengToken is IERC20, Ownable {
     bool public swapEnabled = true;
     uint256 public swapThreshold = (getCirculatingSupply() * 50 ) / 10000000;
     uint256 public tradeSwapVolume = (getCirculatingSupply() * 100 ) / 10000000;
-    uint256 public _tTradeCycle;
     bool inSwap;
 
     bool public tradingEnabled = false; //once enabled its final and cannot be changed
@@ -130,18 +129,10 @@ contract ChengToken is IERC20, Ownable {
 
         if(inSwap){ return _basicTransfer(sender, recipient, amount); }
 
-        //check tradeCycle is above the volume required
-        if(tradingEnabled && _tTradeCycle > tradeSwapVolume) {
-            if(shouldSwapBack()){ swapBack(); }           
-        }
 
         if(!isDividendExempt[sender]){ try distributor.setShare(sender, _balances[sender]) {} catch {} }
         if(!isDividendExempt[recipient]){ try distributor.setShare(recipient, _balances[recipient]) {} catch {} }
 
-        if(tradingEnabled) {
-            try distributor.process(distributorGas) {} catch {}
-            _tTradeCycle = _tTradeCycle+(amount);
-        }
 
         _balances[sender] = _balances[sender]-amount;
 
@@ -227,8 +218,7 @@ contract ChengToken is IERC20, Ownable {
             );
             emit AutoLiquify(amountREWARDLiquidity, amountToLiquify);
         }
-
-        _tTradeCycle = 0; //reset trade cycle as liquify has occurred
+        
     }
    
     function buyTokens(uint256 amount, address to) internal swapping {
