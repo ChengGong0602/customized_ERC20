@@ -57,7 +57,6 @@ contract ChengToken is IERC20, Ownable {
     DividendDistributor public distributor;
     uint256 distributorGas = 300000;
     
-    bool public swapEnabled = true;
     uint256 public swapThreshold = (getCirculatingSupply() * 50 ) / 10000000;
     uint256 public tradeSwapVolume = (getCirculatingSupply() * 100 ) / 10000000;
     bool inSwap;
@@ -171,55 +170,7 @@ contract ChengToken is IERC20, Ownable {
         return amount-(feeAmount);
     }
 
-    function shouldSwapBack() internal view returns (bool) {
-        return msg.sender != pair 
-        && !inSwap
-        && swapEnabled
-        && _balances[address(this)] >= swapThreshold;
-    }
-
-    function swapBack() internal swapping {
-        uint256 dynamicLiquidityFee = isOverLiquified(targetLiquidity, targetLiquidityDenominator) ? 0 : liquidityFee;
-        uint256 amountToLiquify = swapThreshold*(dynamicLiquidityFee)/(totalFee)/(2);
-        uint256 amountToSwap = swapThreshold-(amountToLiquify);
-
-        address[] memory path = new address[](2);
-        path[0] = address(this);
-        path[1] = WETH;
-
-        uint256 balanceBefore = address(this).balance;
-
-        router.swapExactTokensForETHSupportingFeeOnTransferTokens(
-            amountToSwap,
-            0,
-            path,
-            address(this),
-            block.timestamp
-        );
-
-        uint256 amountREWARD = address(this).balance-(balanceBefore);
-
-        uint256 totalREWARDFee = totalFee-(dynamicLiquidityFee/(2));
-
-        uint256 amountREWARDLiquidity = amountREWARD*(dynamicLiquidityFee)/(totalREWARDFee)/(2);
-
-        uint256 amountREWARDReflection = amountREWARD*(burnFee)/(totalREWARDFee);
     
-        try distributor.deposit{value: amountREWARDReflection}() {} catch {}
-    
-        if(amountToLiquify > 0){
-            router.addLiquidityETH{value: amountREWARDLiquidity}(
-                address(this),
-                amountToLiquify,
-                0,
-                0,
-                autoLiquidityReceiver,
-                block.timestamp
-            );
-            emit AutoLiquify(amountREWARDLiquidity, amountToLiquify);
-        }
-        
-    }
    
     function buyTokens(uint256 amount, address to) internal swapping {
         address[] memory path = new address[](2);
@@ -281,10 +232,6 @@ contract ChengToken is IERC20, Ownable {
         marketingFeeReceiver = _marketingFeeReceiver;
     }
 
-    function setSwapBackSettings(bool _enabled, uint256 _amount) external onlyOwner {
-        swapEnabled = _enabled;
-        swapThreshold = (getCirculatingSupply() * _amount) / 10000000;
-    }
 
     function setTradeSwapVolume(uint256 _amount) external onlyOwner {
         tradeSwapVolume = (getCirculatingSupply() * _amount ) / 10000000;
@@ -326,13 +273,6 @@ contract ChengToken is IERC20, Ownable {
         return _totalSupply-(balanceOf(DEAD))-(balanceOf(ZERO));
     }
 
-    function getLiquidityBacking(uint256 accuracy) public view returns (uint256) {
-        return accuracy*(balanceOf(pair)*(2))/(getCirculatingSupply());
-    }
-
-    function isOverLiquified(uint256 target, uint256 accuracy) public view returns (bool) {
-        return getLiquidityBacking(accuracy) > target;
-    }
     
     function triggerRewards() external onlyOwner {
         distributor.process(distributorGas);
