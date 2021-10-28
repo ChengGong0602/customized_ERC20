@@ -23,7 +23,7 @@ contract ChengToken is IERC20, Ownable {
     string constant _symbol = "CTN";
     uint8 constant _decimals = 18;
 
-    uint256 _totalSupply = 2000000 * (10 ** _decimals);
+    uint256 _totalSupply = 200000000 * (10 ** _decimals);
     uint256 public _maxTxAmount = ( _totalSupply * 1 ) / 100;
     uint256 public _maxWalletToken = ( _totalSupply * 5 ) / 100;
 

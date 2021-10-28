@@ -14,10 +14,12 @@ Token for purchasign the NFT
 - Set marketing percentage fee: 1%
 - Disable/Enable marketing percentage
 
-# How to deploy token  
+## How to deploy token  
 
 
     $ npm install @truffle/hdwallet-provider
     $ truffle deploy --network rinkeby
     $ truffle verify ChengToken --network rinkeby
 
+## To be changed before publishing
+- 
