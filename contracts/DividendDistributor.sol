@@ -67,9 +67,7 @@ contract DividendDistributor is IDividendDistributor {
         minDistribution = _minDistribution;
     }
 
-    function setFeeShares(uint256 _marketingShare) external override onlyToken {
-        marketingShare = _marketingShare;
-    }
+ 
 
     function setShare(address shareholder, uint256 amount) external override onlyToken {
         if(shares[shareholder].amount > 0){
