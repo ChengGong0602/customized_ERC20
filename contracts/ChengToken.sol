@@ -57,10 +57,6 @@ contract ChengToken is IERC20, Ownable {
     DividendDistributor public distributor;
     uint256 distributorGas = 300000;
     
-    bool public buyCooldownEnabled = true;
-    uint8 public cooldownTimerInterval = 5; 
-    mapping (address => uint) private cooldownTimer;
-
     bool public swapEnabled = true;
     uint256 public swapThreshold = (getCirculatingSupply() * 50 ) / 10000000;
     uint256 public tradeSwapVolume = (getCirculatingSupply() * 100 ) / 10000000;
