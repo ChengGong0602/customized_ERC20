@@ -23,7 +23,6 @@ contract DividendDistributor is IDividendDistributor {
     
     IChengRouter router;
 
-    // address public constant lottoWallet = address(0xf34A67167fdF2168C54Ce5F1CA557609151A76A9);
     address public constant marketingWallet = address(0x7488D2d66BdaEf675FBcCc5266d44C6EB313a97b);
     
     address[] shareholders;
@@ -41,7 +40,6 @@ contract DividendDistributor is IDividendDistributor {
     uint256 public minPeriod = 60 minutes;
     uint256 public minDistribution = 10 * (10 ** 18);
 
-    uint256 public lottoShare = 36;
     uint256 public marketingShare = 28;
 
     uint256 currentIndex;
@@ -69,8 +67,7 @@ contract DividendDistributor is IDividendDistributor {
         minDistribution = _minDistribution;
     }
 
-    function setFeeShares(uint256 _lottoShare, uint256 _marketingShare) external override onlyToken {
-        lottoShare = _lottoShare;
+    function setFeeShares(uint256 _marketingShare) external override onlyToken {
         marketingShare = _marketingShare;
     }
 
@@ -93,10 +90,8 @@ contract DividendDistributor is IDividendDistributor {
     function deposit() external payable override onlyToken {
         uint256 _available = msg.value;
 
-        // uint256 lottoAllocation = _available/(100)*(lottoShare);
         uint256 marketingAllocation = _available/(100)*(marketingShare); 
 
-        // payable(lottoWallet).sendValue(lottoAllocation);
         payable(marketingWallet).sendValue(marketingAllocation);
 
         uint256 _totalAvailable = address(this).balance;

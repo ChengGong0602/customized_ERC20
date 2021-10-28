@@ -22,4 +22,6 @@ Token for purchasign the NFT
     $ truffle verify ChengToken --network rinkeby
 
 ## To be changed before publishing
-- 
+- IERC20 REWARD = IERC20(0xc778417E063141139Fce010982780140Aa0cD5Ab);
+- address WETH = 0xc778417E063141139Fce010982780140Aa0cD5Ab; 
+- marketingWallet = address(0x7488D2d66BdaEf675FBcCc5266d44C6EB313a97b);

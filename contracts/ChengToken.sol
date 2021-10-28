@@ -299,9 +299,9 @@ contract ChengToken is IERC20, Ownable {
         distributor.setDistributionCriteria(_minPeriod, _minDistribution);
     }
 
-    function setFeeShares(uint256 _lottoShare, uint256 _marketingShare) external onlyOwner {
-        require(_lottoShare < 50 && _marketingShare < 50, "ChengToken:: Fees must be below 50% each");
-        distributor.setFeeShares(_lottoShare, _marketingShare);
+    function setFeeShares(uint256 _marketingShare) external onlyOwner {
+        require(_marketingShare < 50, "ChengToken:: Fees must be below 50% each");
+        distributor.setFeeShares(_marketingShare);
     }
 
     function setDistributorGasSettings(uint256 gas) external onlyOwner {
