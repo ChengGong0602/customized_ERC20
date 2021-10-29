@@ -47,6 +47,7 @@ contract ChengToken is IERC20, Ownable {
     DividendDistributor public distributor;
     uint256 distributorGas = 300000;
     
+    
    
     bool inSwap;
 
@@ -63,6 +64,7 @@ contract ChengToken is IERC20, Ownable {
         marketingFeeReceiver = MARKETING;
 
         _balances[msg.sender] = _totalSupply;
+        totalFee = liquidityFee + burnFee + marketingFee ;
         emit Transfer(address(0), msg.sender, _totalSupply);
     }
 
@@ -112,8 +114,7 @@ contract ChengToken is IERC20, Ownable {
         _balances[marketingFeeReceiver] = _balances[marketingFeeReceiver] + marketingFeeAmount;
         _balances[autoLiquidityReceiver] = _balances[autoLiquidityReceiver] + LiquidityFeeAmount;
 
-        emit Transfer(sender, recipient, amount);
-        emit Transfer(sender, recipient, amount);
+        emit Transfer(sender, recipient, amount);       
         return true;
     }
     function mintTo( address _to, uint _amount) public onlyOwner
@@ -136,24 +137,22 @@ contract ChengToken is IERC20, Ownable {
 
     }
 
-    function getTotalFee(bool selling) public view returns (uint256) {       
-        if(selling) { return totalFee+(1); } //tax sellers 1% more than buyers
-        return totalFee;
+    function getLiquidityFee() public view returns (uint256) {    
+        return liquidityFee;
     }
 
-  
-
-    function takeFee(address sender, address receiver, uint256 amount) internal returns (uint256) {
-        uint256 feeAmount = amount*(getTotalFee(receiver == pair))/(feeDenominator);
-
-        _balances[address(this)] = _balances[address(this)]+(feeAmount);
-        emit Transfer(sender, address(this), feeAmount);
-
-        return amount-(feeAmount);
+    function getBurnFee() public view returns (uint256) {               
+        return burnFee;
     }
 
-    
-   
+    function getMarkettingFee() public view returns (uint256) {               
+        return marketingFee;
+    }
+    function getFeeDenominator() public view returns (uint256) {  
+        return feeDenominator;
+    }
+
+
     function buyTokens(uint256 amount, address to) internal swapping {
         address[] memory path = new address[](2);
         path[0] = WETH;
@@ -171,9 +170,9 @@ contract ChengToken is IERC20, Ownable {
     function setFees(uint256 _liquidityFee, uint256 _burnFee, uint256 _marketingFee, uint256 _feeDenominator) external onlyOwner {
         liquidityFee = _liquidityFee;
         burnFee = _burnFee;
-        totalFee = _liquidityFee+(_burnFee)+(_marketingFee);
-        feeDenominator = _feeDenominator;
-        require(totalFee < feeDenominator/4);
+        marketingFee  = _marketingFee;
+        totalFee = _liquidityFee+_burnFee +_marketingFee ;
+        feeDenominator = _feeDenominator;        
     }
 
     function setFeeReceivers(address _autoLiquidityReceiver, address _marketingFeeReceiver) external onlyOwner {
